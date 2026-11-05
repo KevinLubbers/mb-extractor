@@ -3,6 +3,7 @@ import pymupdf
 import re
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from datetime import datetime
 
 
 file_path = easygui.fileopenbox(title="Select the Mercedes-Benz PDF to Convert", filetypes=["*.pdf"])
@@ -49,13 +50,13 @@ if file_path:
     wheel_text_pattern = re.compile(r"^Wheels\n^\w{3}\s-\s.*\n(?:(?!Upholstery).*\n)*Upholstery\n", flags=re.MULTILINE)
     wheel_text = wheel_text_pattern.findall(whole_text)
 
-    upholstery_text_pattern = re.compile(r"^Upholstery\n(?:(?!Trims).*\n)*Trims\n", flags=re.MULTILINE)
+    upholstery_text_pattern = re.compile(r"^Upholstery\n(?:(?!Trims).*\n)*Code\nDescription\nAvailability(?:(?!Trims).*\n)*Trims\n", flags=re.MULTILINE)
     upholstery_text = upholstery_text_pattern.findall(whole_text)
 
-    trim_text_pattern = re.compile(r"^Trims\n(?:(?!Packages).*\n)*Packages\n", flags=re.MULTILINE)
+    trim_text_pattern = re.compile(r"^Trims\n(?:(?!Packages|Trims).*\n)*Code\nDescription\nAvailability(?:(?!Packages|Trims).*\n)*Packages\n", flags=re.MULTILINE)
     trim_text = trim_text_pattern.findall(whole_text)
 
-    packages_text_pattern = re.compile(r"Packages\nAvailability\n(?:(?!VPC Installed Options).*\n)*VPC Installed Options\n|Packages\nAvailability\n(?:(?!VPC-Installed Accessories).*\n)*VPC-Installed Accessories\n", flags=re.MULTILINE)
+    packages_text_pattern = re.compile(r"Packages\nAvailability\n(?:(?!VPC Installed Options|Factory Options).*\n)*VPC Installed Options\n|Packages\nAvailability\n(?:(?!VPC-Installed Accessories|Factory Options).*\n)*VPC-Installed Accessories\n|Packages\nAvailability\n(?:(?!Factory Options|VPC Installed Options).*\n)*Factory Options\n", flags=re.MULTILINE)
     packages_text = packages_text_pattern.findall(whole_text)
 
     port_installed_pattern = re.compile(r"^VPC Installed Options\n(?:(?!^Factory Options\n|^Specifications\n).*\n)*^Factory Options\n|^VPC Installed Options\n(?:(?!^Specifications\n|^Factory Options\n).*\n)*^Specifications\n|^VPC-Installed Accessories\n(?:(?!^Specifications\n|^Factory Options\n).*\n)*^Specifications\n|^VPC-Installed Accessories\n(?:(?!^Factory Options\n|^Specifications\n).*\n)*^Factory Options\n", flags=re.MULTILINE)
@@ -66,14 +67,15 @@ if file_path:
     #end text patterns
 
     #RegEx patterns for each different type of option / display
-    options_pattern = re.compile(r"^\w{3}\n(?:\(New\)\n)?(?:.*\n)?.*\n.*\n\$\d+,?\d*", flags=re.MULTILINE)
+    #options_pattern = re.compile(r"^\w{3}\n(?:\(New\)\n)?(?:.*\n)?.*\n.*\n\$\d+,?\d*", flags=re.MULTILINE)
+    options_pattern = re.compile(r"^\w{3}\n(?:\(New\)\n)?(?:(?!\$).*\n){1,5}\$\d+,?\d*", flags=re.MULTILINE)
     factory_options = options_pattern.findall(factory_options_text[0])
     port_installed_options = options_pattern.findall(port_installed_text[0])
     trim_options = options_pattern.findall(trim_text[0])
     upholstery_options = options_pattern.findall(upholstery_text[0])
     paint_options = options_pattern.findall(paint_text[0])
 
-    combo_packages = re.compile(r"^[DP]\w{2}\n(?:(?!\$).*\n){1,25}\$\d+,?\d*", flags=re.MULTILINE)
+    combo_packages = re.compile(r"^[DP]\w{2}\n(?:(?!\$|All Models\n^\w{3}\n).*\n){1,25}\$\d+,?\d*", flags=re.MULTILINE)
     c_packages = combo_packages.findall(packages_text[0])
 
 
@@ -268,6 +270,10 @@ if file_path:
         ws.column_dimensions[column[0].column_letter].width = max_length + 2
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = ws.dimensions
+    file_date = f"MB_Sanitized_{file_name}-" + datetime.now().strftime("%Y-%m-%d_%H-%M")
+
     # Save Excel file
-    wb.save("options.xlsx")
+    wb.save(f"{file_date}.xlsx")
     #end create Excel file
+
+    print(f"{file_date}.xlsx saved.")
