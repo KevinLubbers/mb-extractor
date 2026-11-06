@@ -1,6 +1,7 @@
 import easygui
 import pymupdf
 import re
+import json
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from datetime import datetime
@@ -41,7 +42,7 @@ if file_path:
 
         model_price = model_price[0].replace(",", "")
         model_price = model_price.replace("$", "")
-        model_list.append({"model": model_code[0], "options": [{"option": "*MDL", "name": "Base Price", "invoice": (int(model_price) * .8), "msrp": model_price}]})
+        model_list.append({"model": model_code[0], "options": [{"option": "*MDL", "name": "Base Price", "invoice": (int(model_price) * .8), "msrp": model_price, "type": "Price"}]})
 
     #start text patterns
     paint_text_pattern = re.compile(r"Paint\n(?:(?!Wheels).*\n)*Wheels\n")
@@ -101,7 +102,7 @@ if file_path:
         option_msrp = option_msrp.replace(",", "")
         if option_code not in seen_options:
             seen_options.add(option_code)
-            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "category": "EXT"})
+            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "type": "Color"})
     #end paint transformations
 
     #start wheel transformations
@@ -130,14 +131,14 @@ if file_path:
             if front_wheel[1]:
                 rear_string = front_wheel[1]
             front_string = front_wheel[0]
-            option_list.append({"option": tires[0], "name": front_string, "invoice": 0, "msrp": 0, "category": "TIRES"})
+            option_list.append({"option": tires[0], "name": front_string, "invoice": 0, "msrp": 0, "type": "TIRES"})
         if tires[1] not in seen_options:
             seen_options.add(tires[1])
             rear_wheels = each_wheel_name[-2]
             if rear_string:
                 rear_wheels = rear_string + " " + rear_wheels
                 rear_string = ""
-            option_list.append({"option": tires[1], "name": rear_wheels, "invoice": 0, "msrp": 0, "category": "TIRES"})
+            option_list.append({"option": tires[1], "name": rear_wheels, "invoice": 0, "msrp": 0, "type": "TIRES"})
         """
         #end tire transformations
 
@@ -151,7 +152,7 @@ if file_path:
         option_msrp = option_msrp.replace(",", "")
         if option_code not in seen_options:
             seen_options.add(option_code)
-            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "category": "WHEEL"})
+            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "type": "Wheel"})
     #end wheel transformations
 
     #start upholstery transformations
@@ -168,9 +169,9 @@ if file_path:
         if option_code not in seen_options:
             seen_options.add(option_code)
         if "Headliner" in option_name:
-            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "category": "INTFT1"})
+            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "type": "INTFT1"})
         else:
-            option_list.append({"option": option_code, "name": option_name + " Interior Trim", "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "category": "INT"})
+            option_list.append({"option": option_code, "name": option_name + " Interior Trim", "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "type": "INT"})
 
     #start trim transformations
     for each_trim in trim_options:
@@ -185,7 +186,7 @@ if file_path:
         option_msrp = option_msrp.replace(",", "")
         if option_code not in seen_options:
             seen_options.add(option_code)
-            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "category": "DECOR"})
+            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "type": "Trim"})
 
     #start package transformations
     for each_package in c_packages:
@@ -200,7 +201,7 @@ if file_path:
         option_msrp = option_msrp.replace(",", "")
         if option_code not in seen_options:
             seen_options.add(option_code)
-            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "category": "GROUP"})
+            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "type": "GROUP"})
 
     #start Port Installed Packages transformations
     for each_port_installed in port_installed_options:
@@ -215,7 +216,7 @@ if file_path:
         option_msrp = option_msrp.replace(",", "")
         if option_code not in seen_options:
             seen_options.add(option_code)
-            option_list.append({"option": option_code, "name": option_name + " (Port Installed)", "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "category": "PORT"})
+            option_list.append({"option": option_code, "name": option_name + " (Port Installed)", "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "type": "PORT"})
 
     #start Factory Options transformations
     for each_factory in factory_options:
@@ -230,7 +231,7 @@ if file_path:
         option_msrp = option_msrp.replace(",", "")
         if option_code not in seen_options:
             seen_options.add(option_code)
-            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "category": "IND"})
+            option_list.append({"option": option_code, "name": option_name, "invoice": (int(option_msrp) * .8), "msrp": option_msrp, "type": "IND"})
     #end looping through each patterns matches
 
     #add the options list to each model
@@ -244,7 +245,7 @@ if file_path:
     ws.title = "Options"
 
     # Column headers
-    fieldnames = ["model", "option", "name", "invoice", "msrp", "category"]
+    fieldnames = ["model", "option", "name", "invoice", "msrp", "type"]
     ws.append(fieldnames)
 
     # Loop through models and their options
@@ -256,7 +257,7 @@ if file_path:
                 each_option.get("name", ""),
                 each_option.get("invoice", ""),
                 each_option.get("msrp", ""),
-                each_option.get("category", "")
+                each_option.get("type", "")
             ]
 
             ws.append(row)
@@ -277,3 +278,18 @@ if file_path:
     #end create Excel file
 
     print(f"{file_date}.xlsx saved.")
+
+    save_file_path = easygui.filesavebox(
+    default=f"{file_date}",
+    filetypes=["*.json"],
+    title="Choose where to save the extracted Order Guide")
+
+    if save_file_path is None:
+        print("No file selected. Exiting.")
+        exit()
+    if not save_file_path.endswith('.json'):
+        save_file_path += '.json'
+        
+    with open(save_file_path, "w") as outfile:
+        json.dump(model_list, outfile, indent=2)
+        print(f"JSON dumped to {save_file_path}")
